@@ -147,7 +147,7 @@ onUnmounted(() => {
 
 /* 自动答题模式 - 更高 */
 .floating-window.auto-answer-mode {
-  height: 700px;
+  height: 800px;
   width: 400px;
 }
 

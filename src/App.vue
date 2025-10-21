@@ -54,11 +54,13 @@
 
     
     <!-- 状态显示悬浮窗 -->
-    <StatusWindow
-      v-if="operationLogEnabled"
-      :current-status="currentStatus"
-      :operation-history="operationHistory"
-    />
+    <Transition name="status-fade-slide">
+      <StatusWindow
+        v-if="operationLogEnabled && currentPage !== 'auto-answer'"
+        :current-status="currentStatus"
+        :operation-history="operationHistory"
+      />
+    </Transition>
 
     <!-- 控制按钮 -->
     <ControlButton
@@ -67,11 +69,13 @@
     />
 
     <!-- 全屏遮罩 About 页面 -->
-    <div v-if="showAboutPage" class="about-overlay">
-      <div class="about-container">
-        <AboutPage @close="showAboutPage = false" />
+    <Transition name="about-fade-scale">
+      <div v-if="showAboutPage" class="about-overlay">
+        <div class="about-container">
+          <AboutPage @close="showAboutPage = false" />
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -94,6 +98,12 @@ const autoMuteEnabled = ref(false) // 自动静音开关状态
 const stateExceptionEnabled = ref(false) // 状态异常检测开关状态
 const autoPlayEnabled = ref(false) // 视频暂停自动播放开关状态
 const operationLogEnabled = ref(true) // 操作日志开关状态
+const rainbowEnabled = ref(false) // Rainbow效果开关状态
+const rainbowSettings = ref({
+  backgroundUrl: 'https://bing.img.run/rand.php',
+  backgroundOpacity: 1.0,
+  glassEffectIntensity: 7
+}) // Rainbow设置
 const autoCompleteInterval = ref(null) // 自动检测定时器
 const stateExceptionInterval = ref(null) // 状态异常检测定时器
 const autoPlayInterval = ref(null) // 自动播放检测定时器
@@ -141,21 +151,38 @@ const saveFeatureStates = async () => {
     autoMuteEnabled: autoMuteEnabled.value,
     stateExceptionEnabled: stateExceptionEnabled.value,
     autoPlayEnabled: autoPlayEnabled.value,
-    operationLogEnabled: operationLogEnabled.value
+    operationLogEnabled: operationLogEnabled.value, // This is the state that controls visibility
+    rainbowEnabled: rainbowEnabled.value,
+    rainbowSettings: rainbowSettings.value
   }
+  console.log('保存功能状态到存储:', states)
   await setStorageValue('beelineHelper_featureStates', states)
 }
 
 // 加载功能开关状态
 const loadFeatureStates = async () => {
   const states = await getStorageValue('beelineHelper_featureStates')
+  console.log('从存储加载功能状态:', states)
   if (states) {
     try {
       autoCompleteEnabled.value = states.autoCompleteEnabled || false
       autoMuteEnabled.value = states.autoMuteEnabled || false
       stateExceptionEnabled.value = states.stateExceptionEnabled || false
       autoPlayEnabled.value = states.autoPlayEnabled || false
-      operationLogEnabled.value = states.operationLogEnabled !== undefined ? states.operationLogEnabled : true
+      operationLogEnabled.value = states.operationLogEnabled !== undefined ? states.operationLogEnabled : true // Explicitly set based on loaded state
+      rainbowEnabled.value = states.rainbowEnabled || false
+
+      // The userOperationLogPref is now a direct reference to operationLogEnabled.
+      // So no need to separately load it here.
+
+      // 加载Rainbow设置
+      if (states.rainbowSettings) {
+        rainbowSettings.value = {
+          backgroundUrl: states.rainbowSettings.backgroundUrl || 'https://images.unsplash.com/photo-1593642532973-d31b6557fa68?auto=format&fit=crop&w=1920&q=80',
+          backgroundOpacity: states.rainbowSettings.backgroundOpacity || 0.9,
+          glassEffectIntensity: states.rainbowSettings.glassEffectIntensity || 12
+        }
+      }
 
       // 根据加载的状态启动相应的功能
       if (autoCompleteEnabled.value) {
@@ -170,16 +197,17 @@ const loadFeatureStates = async () => {
       if (autoPlayEnabled.value) {
         startAutoPlay()
       }
+      if (rainbowEnabled.value) {
+        // 延迟应用Rainbow样式，确保DOM已加载
+        setTimeout(() => {
+          applyRainbowStyles()
+        }, 100)
+      }
     } catch (e) {
       console.warn('Failed to load feature states:', e)
     }
   }
-
-  // 同时检查独立的操作日志设置
-  const savedOperationLog = await getStorageValue('beeline-helper-operation-log')
-  if (savedOperationLog !== null) {
-    operationLogEnabled.value = savedOperationLog
-  }
+  // Removed redundant check for 'beeline-helper-operation-log' as all states are under 'beelineHelper_featureStates'
 }
 
 // 自动点击完成按钮开关处理
@@ -234,14 +262,10 @@ const checkIsHomeworkPage = () => {
   // 检查是否是题目页面（包含homeworkPaperId）
   const isQuestionPage = currentUrl.includes('homeworkpaperid')
 
-  // 如果是题目页面，自动打开自动答题页面并隐藏操作日志
+  // 如果是题目页面，自动打开自动答题页面
   if (isQuestionPage && currentPage.value !== 'auto-answer') {
     currentPage.value = 'auto-answer'
     isWindowVisible.value = true
-    operationLogEnabled.value = false
-  } else if (!isQuestionPage) {
-    // 如果不是题目页面，恢复操作日志显示
-    operationLogEnabled.value = true
   }
 
   return isQuestionPage
@@ -261,11 +285,10 @@ const setupNetworkMonitoring = () => {
     if (typeof url === 'string' && url.includes('/api/learning-service/admin/studentLearning/getHomeworkPaperDetail/')) {
       console.log('检测到题目页面请求:', url)
 
-      // 如果是题目页面，自动打开自动答题页面并重置位置，同时隐藏操作日志
+      // 如果是题目页面，自动打开自动答题页面并重置位置
       if (currentPage.value !== 'auto-answer') {
         currentPage.value = 'auto-answer'
         isWindowVisible.value = true
-        operationLogEnabled.value = false
 
         // 重置浮窗位置到屏幕最左侧
         setTimeout(() => {
@@ -300,11 +323,10 @@ const setupNetworkMonitoring = () => {
         if (this._url && this._url.includes('/api/learning-service/admin/studentLearning/getHomeworkPaperDetail/')) {
           console.log('检测到题目页面请求(XHR):', this._url)
 
-          // 如果是题目页面，自动打开自动答题页面并重置位置，同时隐藏操作日志
+          // 如果是题目页面，自动打开自动答题页面并重置位置
           if (currentPage.value !== 'auto-answer') {
             currentPage.value = 'auto-answer'
             isWindowVisible.value = true
-            operationLogEnabled.value = false
 
             // 重置浮窗位置到屏幕最左侧
             setTimeout(() => {
@@ -632,6 +654,354 @@ const handlePageChange = () => {
   checkIsHomeworkPage()
 }
 
+// 应用Rainbow样式
+const applyRainbowStyles = () => {
+  console.log('应用Rainbow样式', rainbowSettings.value)
+
+  // 创建或更新背景层
+  let bgLayer = document.getElementById('beeline-bg-layer')
+  if (!bgLayer) {
+    bgLayer = document.createElement('div')
+    bgLayer.id = 'beeline-bg-layer'
+    Object.assign(bgLayer.style, {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      zIndex: '-1',
+      pointerEvents: 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      filter: 'brightness(0.95)',
+      transition: 'opacity 0.5s ease-in-out',
+      opacity: '0' // 初始透明
+    })
+    document.body.appendChild(bgLayer)
+  }
+
+  // 立即设置背景图片（即使还没加载完成）
+  bgLayer.style.backgroundImage = `url(${rainbowSettings.value.backgroundUrl})`
+
+  // 添加加载指示器
+  const removeLoader = addLoadingEffect(bgLayer)
+
+  // 预加载背景图片
+  preloadBackgroundImage(rainbowSettings.value.backgroundUrl)
+    .then(() => {
+      // 图片加载完成后淡入背景
+      setTimeout(() => {
+        bgLayer.style.opacity = rainbowSettings.value.backgroundOpacity.toString()
+
+        // 设置页面背景为透明
+        document.documentElement.style.setProperty('background-color', 'transparent', 'important')
+        document.body.style.setProperty('background-color', 'transparent', 'important')
+
+        // 应用毛玻璃效果到特定元素
+        applyGlassEffects()
+
+        // 设置透明层
+        applyTransparentLayers()
+
+        // 启动DOM观察器来处理动态内容
+        startDOMObserver()
+
+        // 移除加载指示器
+        setTimeout(removeLoader, 500)
+      }, 100)
+    })
+    .catch((error) => {
+      console.error('背景图片加载失败:', error)
+      // 即使图片加载失败，仍然应用其他样式
+      setTimeout(() => {
+        bgLayer.style.opacity = rainbowSettings.value.backgroundOpacity.toString()
+
+        document.documentElement.style.setProperty('background-color', 'transparent', 'important')
+        document.body.style.setProperty('background-color', 'transparent', 'important')
+        applyGlassEffects()
+        applyTransparentLayers()
+        startDOMObserver()
+
+        // 移除加载指示器
+        setTimeout(removeLoader, 500)
+      }, 100)
+    })
+}
+
+// 应用毛玻璃效果
+const applyGlassEffects = () => {
+  const glassConfigs = [
+    {
+      selectors: [
+        ".el-header",
+        ".card",
+        ".popup",
+        "#chatLayout > div.chatIndex-sidebar.noCollapsed",
+        "#chatLayout > div.chatIndex-sidebar.collapsed"
+      ],
+      config: {
+        bgColor: 'rgba(255, 255, 255, 0.18)',
+        blur: `${rainbowSettings.value.glassEffectIntensity}px`,
+        radius: '12px',
+        exclude: ['.el-menu', '.el-menu-item', '.el-sub-menu']
+      }
+    },
+    {
+      selectors: [
+        "#chatLayout > main > div > div.chat-content-inner.chat-content-inner--full > div.teacher-bank-main > ul > li",
+        ".el-menu-item",
+        ".el-sub-menu"
+      ],
+      config: {
+        bgColor: 'rgba(255, 255, 255, 0.12)',
+        blur: `${Math.max(rainbowSettings.value.glassEffectIntensity - 4, 0)}px`,
+        radius: '10px'
+      }
+    },
+    {
+      selectors: [
+        "#LayoutTeaching > main > div > div > div.tabs",
+        "#LayoutTeaching > main > div > div > div.tab-pane > div:nth-child(1) > div.header",
+        ".homework-list[data-v-b27e416b]"
+      ],
+      config: {
+        bgColor: 'rgba(255, 255, 255, 0.1)',
+        blur: `${Math.max(rainbowSettings.value.glassEffectIntensity - 2, 0)}px`,
+        radius: '12px',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }
+    }
+  ]
+
+  glassConfigs.forEach(effect => {
+    effect.selectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector)
+        elements.forEach(el => {
+          if (effect.config.exclude && effect.config.exclude.some(ex => el.matches(ex))) return
+
+          el.style.setProperty('background-color', effect.config.bgColor, 'important')
+          el.style.setProperty('backdrop-filter', `blur(${effect.config.blur})`, 'important')
+          el.style.setProperty('border-radius', effect.config.radius, 'important')
+          el.style.setProperty('transition', 'all 0.3s ease', 'important')
+
+          if (effect.config.border) {
+            el.style.setProperty('border', effect.config.border, 'important')
+          }
+
+          el.style.backgroundImage = 'none'
+        })
+      } catch (e) {
+        console.error(`Invalid selector: ${selector}`, e)
+      }
+    })
+  })
+}
+
+// 应用透明层
+const applyTransparentLayers = () => {
+  const transparentSelectors = [
+    "#LayoutTeaching > main > div",
+    "#LayoutTeaching > main > div > div > div.tab-pane > div:nth-child(1) > div.loading-container > div",
+    "#chatLayout > main > div > div:nth-child(2) > div:nth-child(2) > ul",
+    "#app",
+    ".el-main[data-v-6b17b855]",
+    "#LayoutTeaching > main > div > div > div.course-introduce-tab"
+  ]
+
+  transparentSelectors.forEach(selector => {
+    try {
+      const elements = document.querySelectorAll(selector)
+      elements.forEach(el => {
+        el.style.setProperty('background-color', 'transparent', 'important')
+        el.style.backgroundImage = 'none'
+      })
+    } catch (e) {
+      console.error(`Invalid selector: ${selector}`, e)
+    }
+  })
+}
+
+// 移除Rainbow样式
+const removeRainbowStyles = () => {
+  console.log('移除Rainbow样式')
+
+  // 移除背景层
+  const bgLayer = document.getElementById('beeline-bg-layer')
+  if (bgLayer) {
+    bgLayer.remove()
+  }
+
+  // 恢复页面背景
+  document.documentElement.style.removeProperty('background-color')
+  document.body.style.removeProperty('background-color')
+
+  // 移除所有毛玻璃效果
+  const elementsWithGlass = document.querySelectorAll('[style*="backdrop-filter"]')
+  elementsWithGlass.forEach(el => {
+    el.style.removeProperty('backdrop-filter')
+    el.style.removeProperty('background-color')
+    el.style.removeProperty('border-radius')
+    el.style.removeProperty('border')
+    el.style.removeProperty('transition')
+  })
+
+  // 恢复透明层
+  const transparentSelectors = [
+    "#LayoutTeaching > main > div",
+    "#LayoutTeaching > main > div > div > div.tab-pane > div:nth-child(1) > div.loading-container > div",
+    "#chatLayout > main > div > div:nth-child(2) > div:nth-child(2) > ul",
+    "#app",
+    ".el-main[data-v-6b17b855]",
+    "#LayoutTeaching > main > div > div > div.course-introduce-tab"
+  ]
+
+  transparentSelectors.forEach(selector => {
+    try {
+      const elements = document.querySelectorAll(selector)
+      elements.forEach(el => {
+        el.style.removeProperty('background-color')
+        el.style.removeProperty('background-image')
+      })
+    } catch (e) {
+      console.error(`Invalid selector: ${selector}`, e)
+    }
+  })
+
+  // 停止DOM观察器
+  stopDOMObserver()
+}
+
+// DOM观察器处理动态内容
+let mutationObserver = null
+
+const startDOMObserver = () => {
+  if (mutationObserver) {
+    return // 观察器已经在运行
+  }
+
+  mutationObserver = new MutationObserver((mutations) => {
+    let shouldReapply = false
+
+    mutations.forEach(mutation => {
+      if (mutation.addedNodes.length > 0) {
+        shouldReapply = true
+      }
+    })
+
+    if (shouldReapply) {
+      // 延迟重新应用样式，确保新元素已完全加载
+      setTimeout(() => {
+        applyGlassEffects()
+        applyTransparentLayers()
+      }, 100)
+    }
+  })
+
+  // 开始观察DOM变化
+  mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true
+  })
+
+  console.log('DOM观察器已启动')
+}
+
+const stopDOMObserver = () => {
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+    mutationObserver = null
+    console.log('DOM观察器已停止')
+  }
+}
+
+// 预加载背景图片
+const preloadBackgroundImage = (url) => {
+  return new Promise((resolve, reject) => {
+    // 如果是data URL，直接解析
+    if (url.startsWith('data:')) {
+      resolve()
+      return
+    }
+
+    const img = new Image()
+
+    img.onload = () => {
+      console.log('背景图片预加载成功')
+      resolve()
+    }
+
+    img.onerror = () => {
+      console.warn('背景图片预加载失败，将使用异步加载')
+      reject(new Error('图片加载失败'))
+    }
+
+    // 设置超时时间
+    const timeout = setTimeout(() => {
+      console.warn('背景图片加载超时，将使用异步加载')
+      reject(new Error('图片加载超时'))
+    }, 3000) // 3秒超时
+
+    img.onload = () => {
+      clearTimeout(timeout)
+      console.log('背景图片预加载成功')
+      resolve()
+    }
+
+    img.onerror = () => {
+      clearTimeout(timeout)
+      console.warn('背景图片预加载失败，将使用异步加载')
+      reject(new Error('图片加载失败'))
+    }
+
+    img.src = url
+  })
+}
+
+// 添加渐进式加载效果
+const addLoadingEffect = (bgLayer) => {
+  // 创建加载指示器
+  const loader = document.createElement('div')
+  loader.id = 'beeline-bg-loader'
+  Object.assign(loader.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '40px',
+    height: '40px',
+    border: '3px solid rgba(255,255,255,0.3)',
+    borderTop: '3px solid #667eea',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    zIndex: '9999',
+    pointerEvents: 'none'
+  })
+
+  // 添加旋转动画
+  const style = document.createElement('style')
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+  `
+  document.head.appendChild(style)
+
+  document.body.appendChild(loader)
+
+  // 返回移除函数
+  return () => {
+    if (loader.parentNode) {
+      loader.remove()
+    }
+    if (style.parentNode) {
+      style.remove()
+    }
+  }
+}
+
 // 添加事件监听器
 onMounted(async () => {
   // 监听页面变化
@@ -646,8 +1016,17 @@ onMounted(async () => {
 
   // 暴露应用实例以便其他组件访问
   window.beelineHelperApp = {
-    operationLogEnabled
+    operationLogEnabled,
+    userOperationLogPref: operationLogEnabled, // 将 operationLogEnabled 直接暴露为用户操作日志偏好
+    rainbowEnabled,
+    rainbowSettings,
+    applyRainbowStyles,
+    removeRainbowStyles,
+    saveFeatureStates,
+    checkIsHomeworkPage
   }
+
+
 })
 
 onUnmounted(() => {
@@ -731,5 +1110,43 @@ onUnmounted(() => {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* About 页面过渡动画 */
+.about-fade-scale-enter-active,
+.about-fade-scale-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.about-fade-scale-enter-from,
+.about-fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.about-fade-scale-enter-to,
+.about-fade-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.status-fade-slide-enter-active {
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.status-fade-slide-leave-active {
+  transition: opacity 0.3s ease-in, transform 0.3s ease-in;
+}
+
+.status-fade-slide-enter-from,
+.status-fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.status-fade-slide-enter-to,
+.status-fade-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
 }
 </style>

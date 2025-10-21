@@ -82,8 +82,13 @@ onMounted(async () => {
       <p class="feedback">
         有 BUG？请到
         <a href="https://greasyfork.org/zh-CN/scripts/490485" target="_blank">GreasyFork</a>
+        或 发送邮件到2665002659@qq.com
         反馈。
       </p>
+
+      <div class="warning">
+        <p>当前版本仍然为测试预览版！(待全部开发完毕后会有教程，耐心等待即可)</p>
+      </div>
 
       <label class="agree-label">
         <input
