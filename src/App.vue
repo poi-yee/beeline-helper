@@ -708,6 +708,11 @@ const applyRainbowStyles = () => {
 
         // 移除加载指示器
         setTimeout(removeLoader, 500)
+
+        // 初始删除已存在的元素
+        setTimeout(() => {
+          removeCourseIntroduceTabElements()
+        }, 200)
       }, 100)
     })
     .catch((error) => {
@@ -724,6 +729,11 @@ const applyRainbowStyles = () => {
 
         // 移除加载指示器
         setTimeout(removeLoader, 500)
+
+        // 初始删除已存在的元素
+        setTimeout(() => {
+          removeCourseIntroduceTabElements()
+        }, 200)
       }, 100)
     })
 }
@@ -737,7 +747,8 @@ const applyGlassEffects = () => {
         ".card",
         ".popup",
         "#chatLayout > div.chatIndex-sidebar.noCollapsed",
-        "#chatLayout > div.chatIndex-sidebar.collapsed"
+        "#chatLayout > div.chatIndex-sidebar.collapsed",
+        "#LayoutTeaching > main > div > div"
       ],
       config: {
         bgColor: 'rgba(255, 255, 255, 0.18)',
@@ -806,7 +817,8 @@ const applyTransparentLayers = () => {
     "#chatLayout > main > div > div:nth-child(2) > div:nth-child(2) > ul",
     "#app",
     ".el-main[data-v-6b17b855]",
-    "#LayoutTeaching > main > div > div > div.course-introduce-tab"
+    "#LayoutTeaching > main > div > div > div.course-introduce-tab",
+    "#LayoutTeaching > main > div > div > div.course-courseWare__body"
   ]
 
   transparentSelectors.forEach(selector => {
@@ -882,12 +894,37 @@ const startDOMObserver = () => {
 
   mutationObserver = new MutationObserver((mutations) => {
     let shouldReapply = false
+    let shouldRemoveElements = false
 
     mutations.forEach(mutation => {
       if (mutation.addedNodes.length > 0) {
         shouldReapply = true
+
+        // 检查新增节点中是否包含需要删除的元素
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1) { // Element node
+            if (node.classList && node.classList.contains('course-introduce-tab__content')) {
+              shouldRemoveElements = true
+            }
+            // 检查子元素
+            if (node.querySelectorAll) {
+              const contentElements = node.querySelectorAll('.course-introduce-tab__content')
+              const tabElement = node.querySelector("#LayoutTeaching > main > div > div > div.course-introduce-tab")
+              if (contentElements.length > 0 || tabElement) {
+                shouldRemoveElements = true
+              }
+            }
+          }
+        })
       }
     })
+
+    if (shouldRemoveElements) {
+      // 延迟删除，确保元素已完全加载
+      setTimeout(() => {
+        removeCourseIntroduceTabElements()
+      }, 50)
+    }
 
     if (shouldReapply) {
       // 延迟重新应用样式，确保新元素已完全加载
@@ -957,6 +994,27 @@ const preloadBackgroundImage = (url) => {
 
     img.src = url
   })
+}
+
+// 删除 course-introduce-tab 相关元素
+const removeCourseIntroduceTabElements = () => {
+  // 删除 class="course-introduce-tab__content" 的元素
+  const contentElements = document.querySelectorAll('.course-introduce-tab__content')
+  contentElements.forEach(element => {
+    element.remove()
+    console.log('已删除 course-introduce-tab__content 元素')
+  })
+
+  // 删除特定路径的 course-introduce-tab 元素
+  const tabElement = document.querySelector("#LayoutTeaching > main > div > div > div.course-introduce-tab")
+  if (tabElement) {
+    tabElement.remove()
+    console.log('已删除特定 course-introduce-tab 元素')
+  }
+
+  if (contentElements.length > 0 || tabElement) {
+    console.log(`已删除 ${contentElements.length} 个 course-introduce-tab__content 元素和 ${tabElement ? 1 : 0} 个特定 course-introduce-tab 元素`)
+  }
 }
 
 // 添加渐进式加载效果
