@@ -77,13 +77,37 @@
 ```
 beeline-helper/
 ├── src/
-│   ├── main.js          # 入口文件
-│   └── App.vue          # 主组件
+│   ├── main.js                    # 应用入口点，处理DOM注入
+│   ├── App.vue                    # 主Vue组件，包含悬浮窗口UI
+│   ├── components/
+│   │   ├── FloatingWindow.vue     # 可拖拽窗口容器
+│   │   ├── ControlButton.vue      # 窗口显示/隐藏切换按钮
+│   │   ├── StatusWindow.vue       # 固定状态显示窗口
+│   │   ├── MainPage.vue           # 主页，包含功能导航
+│   │   ├── AutoCoursePage.vue     # 自动刷课配置页面
+│   │   ├── AutoAnswerPage.vue     # 自动答题界面
+│   │   ├── AdvancedSettingsPage.vue # 高级设置页面
+│   │   ├── AboutPage.vue          # 关于信息页面
+│   │   └── AnswerSettingsPage.vue # 答题设置配置页面
+│   ├── utils/
+│   │   ├── autoAnswer.js          # 核心自动答题功能
+│   │   ├── questionDetection.js   # 题目类型和内容检测
+│   │   ├── questionBankAPI.js     # 外部题库API集成
+│   │   ├── sequentialAnswer.js    # 顺序答题逻辑
+│   │   ├── questionBankConfig.js  # 题库配置管理
+│   │   ├── subjectiveAnswer.js    # 主观题答题功能
+│   │   ├── completionAnswer.js    # 填空题答题功能
+│   │   └── storage.js             # 存储工具（使用GM_* API）
+│   └── assets/
+│       ├── pay.jpg                # 赞助二维码
+│       ├── icon.jpg               # 图标
+│       └── huggingface_logo-noborder.svg # HuggingFace Logo
 ├── dist/
-│   └── beeline-helper.user.js  # 构建产物
-├── vite.config.js       # Vite 配置
+│   └── beeline-helper.user.js     # 构建产物
+├── vite.config.js                 # Vite配置
 ├── package.json
-└── README.md
+├── README.md
+└── CLAUDE.md                      # Claude代码助手指导文件
 ```
 
 ## 技术栈
