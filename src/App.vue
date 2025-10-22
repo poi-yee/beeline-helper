@@ -102,7 +102,7 @@ const rainbowEnabled = ref(false) // Rainbow效果开关状态
 const rainbowSettings = ref({
   backgroundUrl: 'https://bing.img.run/rand.php',
   backgroundOpacity: 1.0,
-  glassEffectIntensity: 7
+  glassEffectIntensity: 15
 }) // Rainbow设置
 const autoCompleteInterval = ref(null) // 自动检测定时器
 const stateExceptionInterval = ref(null) // 状态异常检测定时器
@@ -180,7 +180,7 @@ const loadFeatureStates = async () => {
         rainbowSettings.value = {
           backgroundUrl: states.rainbowSettings.backgroundUrl || 'https://images.unsplash.com/photo-1593642532973-d31b6557fa68?auto=format&fit=crop&w=1920&q=80',
           backgroundOpacity: states.rainbowSettings.backgroundOpacity || 0.9,
-          glassEffectIntensity: states.rainbowSettings.glassEffectIntensity || 12
+          glassEffectIntensity: states.rainbowSettings.glassEffectIntensity || 15
         }
       }
 
@@ -680,6 +680,26 @@ const applyRainbowStyles = () => {
     document.body.appendChild(bgLayer)
   }
 
+  // 创建或更新黑色叠加层
+  let overlayLayer = document.getElementById('beeline-overlay-layer')
+  if (!overlayLayer) {
+    overlayLayer = document.createElement('div')
+    overlayLayer.id = 'beeline-overlay-layer'
+    Object.assign(overlayLayer.style, {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      zIndex: '-1',
+      pointerEvents: 'none',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      transition: 'opacity 0.5s ease-in-out',
+      opacity: '0' // 初始透明
+    })
+    document.body.appendChild(overlayLayer)
+  }
+
   // 立即设置背景图片（即使还没加载完成）
   bgLayer.style.backgroundImage = `url(${rainbowSettings.value.backgroundUrl})`
 
@@ -691,7 +711,9 @@ const applyRainbowStyles = () => {
     .then(() => {
       // 图片加载完成后淡入背景
       setTimeout(() => {
-        bgLayer.style.opacity = rainbowSettings.value.backgroundOpacity.toString()
+        // 设置背景层完全不透明，黑色叠加层使用用户设置的透明度
+        bgLayer.style.opacity = '1'
+        overlayLayer.style.opacity = (1 - rainbowSettings.value.backgroundOpacity).toString()
 
         // 设置页面背景为透明
         document.documentElement.style.setProperty('background-color', 'transparent', 'important')
@@ -719,7 +741,9 @@ const applyRainbowStyles = () => {
       console.error('背景图片加载失败:', error)
       // 即使图片加载失败，仍然应用其他样式
       setTimeout(() => {
-        bgLayer.style.opacity = rainbowSettings.value.backgroundOpacity.toString()
+        // 设置背景层完全不透明，黑色叠加层使用用户设置的透明度
+        bgLayer.style.opacity = '1'
+        overlayLayer.style.opacity = (1 - rainbowSettings.value.backgroundOpacity).toString()
 
         document.documentElement.style.setProperty('background-color', 'transparent', 'important')
         document.body.style.setProperty('background-color', 'transparent', 'important')
@@ -842,6 +866,12 @@ const removeRainbowStyles = () => {
   const bgLayer = document.getElementById('beeline-bg-layer')
   if (bgLayer) {
     bgLayer.remove()
+  }
+
+  // 移除黑色叠加层
+  const overlayLayer = document.getElementById('beeline-overlay-layer')
+  if (overlayLayer) {
+    overlayLayer.remove()
   }
 
   // 恢复页面背景

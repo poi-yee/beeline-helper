@@ -13,6 +13,8 @@ This is a browser extension built with Vite + Vue 3 + vite-plugin-monkey that ad
 - `npm run build` - Build production version to `dist/beeline-helper.user.js`
 - `npm run preview` - Preview the built extension
 
+**Note**: The extension only activates on `*://*.beeline-ai.com/*` URLs. Test on actual beeline-ai.com pages to verify functionality.
+
 ## Architecture
 
 ### Core Components
@@ -27,6 +29,8 @@ This is a browser extension built with Vite + Vue 3 + vite-plugin-monkey that ad
 - **External Vue**: Uses external Vue dependency to reduce bundle size
 - **No Minification**: Builds without minification for easier debugging
 - **Target**: `esnext` for modern browser compatibility
+- **Version**: 0.6.0 (configured in vite.config.js)
+- **Grants**: GM_getValue, GM_setValue, GM_deleteValue for persistent storage
 
 ### Key Features
 
@@ -105,6 +109,8 @@ The auto answer functionality includes:
 - **Question Statistics**: Provides counts of total questions and supported types
 - **API Token Management**: Supports token-based authentication for external APIs
 - **Agreement System**: Requires user agreement before using auto-answer features
+- **Skip Logic**: Automatically skips questions that already have selections
+- **Error Handling**: Comprehensive error handling with detailed logging
 
 ### Feature Persistence
 
@@ -123,6 +129,8 @@ The extension intercepts network requests to:
 - Automatically open the auto-answer interface when appropriate
 - Intercepts both `fetch` and `XMLHttpRequest` APIs to capture all network activity
 - Uses separate monitoring systems for question detection and state exception detection to avoid conflicts
+- **Question Detection**: Opens auto-answer page when homework paper details are requested
+- **State Exception Detection**: Automatically refreshes page when learning state reports return code 500
 
 ### Event Handling
 
@@ -132,6 +140,7 @@ The extension intercepts network requests to:
 - **DOM Observation**: MutationObserver for detecting new video elements and content changes
 - **Video State Monitoring**: Detects when videos are paused and automatically resumes playback with error handling
 - **Network Request Interception**: Overrides fetch and XMLHttpRequest to monitor API calls with proper error handling
+- **Rainbow Effects**: DOM observation for dynamic content with glass effects and background styling
 
 ### State Management
 
@@ -142,6 +151,8 @@ The extension intercepts network requests to:
 - **Video State**: Monitoring and control of video elements (mute, play, pause) with DOM observation
 - **Network State**: Tracking of intercepted API requests and responses with separate monitoring instances
 - **Agreement State**: User agreement tracking for auto-answer feature with GM_* API
+- **Rainbow Settings**: Background image, opacity, and glass effect intensity configuration
+- **API Token**: External question bank API token for auto-answer functionality
 
 When modifying the extension:
 - Keep the userscript header in `vite.config.js` updated with version changes

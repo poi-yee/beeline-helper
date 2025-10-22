@@ -78,7 +78,7 @@
                 type="range"
                 v-model="rainbowSettings.glassEffectIntensity"
                 min="0"
-                max="20"
+                max="40"
                 step="1"
                 class="slider"
               >
@@ -89,6 +89,8 @@
           <div class="preview-section">
             <h5>预览</h5>
             <div class="preview-box" :style="previewStyle">
+              <!-- 黑色叠加层 -->
+              <div class="preview-overlay" :style="{ opacity: 1 - rainbowSettings.backgroundOpacity }"></div>
               <div class="preview-glass" :style="previewGlassStyle">
                 毛玻璃效果预览
               </div>
@@ -123,7 +125,7 @@ const rainbowEnabled = ref(false)
 const rainbowSettings = ref({
   backgroundUrl: 'https://images.unsplash.com/photo-1593642532973-d31b6557fa68?auto=format&fit=crop&w=1920&q=80',
   backgroundOpacity: 0.9,
-  glassEffectIntensity: 12
+  glassEffectIntensity: 15
 })
 
 // 预览样式
@@ -131,7 +133,7 @@ const previewStyle = computed(() => ({
   backgroundImage: `url(${rainbowSettings.value.backgroundUrl})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  opacity: rainbowSettings.value.backgroundOpacity
+  opacity: 1 // 背景图片始终保持完全不透明
 }))
 
 const previewGlassStyle = computed(() => ({
@@ -606,6 +608,16 @@ const removeRainbowStyles = () => {
   overflow: hidden;
 }
 
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  transition: opacity 0.3s ease;
+}
+
 .preview-glass {
   position: absolute;
   top: 50%;
@@ -618,6 +630,7 @@ const removeRainbowStyles = () => {
   font-size: 14px;
   font-weight: 500;
   backdrop-filter: blur(12px);
+  z-index: 1;
 }
 
 .modal-footer {
