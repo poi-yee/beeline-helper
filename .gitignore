@@ -32,7 +32,6 @@ jspm_packages/
 .env.local
 
 # Vite and build output
-dist/
 .cache/
 out/
 
