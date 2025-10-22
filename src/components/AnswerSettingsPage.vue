@@ -19,6 +19,10 @@
           />
         </div>
 
+        <a href="https://tk.enncy.cn" target="_blank" class="token-link">
+          获取 Token(硅基流动)
+        </a>
+        
         <div class="token-input-box">
           <label for="aiTokenInput">AI Token:</label>
           <input
@@ -32,7 +36,7 @@
       </div>
 
       <div class="ai-settings-section">
-        <h4>AI 辅助设置</h4>
+        <h4>AI 辅助设置(这个还没做，别用)</h4>
 
         <div class="toggle-item">
           <label class="toggle-label">

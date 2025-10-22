@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import monkey from 'vite-plugin-monkey'
+import fs from 'fs'
+
+const iconBase64 = fs.readFileSync('src/assets/icon.jpg', 'base64')
 
 export default defineConfig({
   plugins: [
@@ -8,14 +11,14 @@ export default defineConfig({
     monkey({
       entry: 'src/main.js',
       userscript: {
-        name: 'Beeline Helper',
-        namespace: 'beeline-helper',
-        version: '1.0.0',
-        description: 'A helper extension for beeline-ai.com with floating window UI',
-        author: 'beeline-helper',
+        name: '芯位助手-Beeline Helper',
+        namespace: 'https://github.com/poi-yee/51xinweiauto',
+        version: '0.6.0',
+        description: '芯位蜜线/教育 自动播放，自动刷作业',
+        author: 'PoiYee,Code-dogcreatior',
         match: ['*://*.beeline-ai.com/*'],
         grant: ['GM_getValue', 'GM_setValue', 'GM_deleteValue'],
-        icon: 'https://www.google.com/s2/favicons?domain=beeline-ai.com&sz=32'
+        icon: `data:image/png;base64,${iconBase64}`
       },
     })
   ],
