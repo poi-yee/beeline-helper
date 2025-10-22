@@ -1,7 +1,7 @@
 {
-  "name": "beeline-helper",
-  "version": "1.0.0",
-  "description": "A browser extension for beeline-ai.com with floating window UI",
+  "name": "芯位助手-Beeline Helper",
+  "version": "0.7.0",
+  "description": "芯位蜜线/教育 自动播放，自动刷作业",
   "type": "module",
   "scripts": {
     "dev": "vite",

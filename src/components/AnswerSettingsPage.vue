@@ -19,7 +19,7 @@
           />
         </div>
 
-        <a href="https://tk.enncy.cn" target="_blank" class="token-link">
+        <a href="https://siliconflow.cn/" target="_blank" class="token-link">
           获取 Token(硅基流动)
         </a>
         
