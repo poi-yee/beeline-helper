@@ -4,7 +4,7 @@
     <div v-if="!isAgreementChecked" class="overlay-blocker">
       <div class="overlay-content">
       <div class="warning-icon">
-        <img src="C:\Users\PoiYee\Desktop\bh\beeline-helper\src\assets\huggingface_logo-noborder.svg" alt="提示图标" class="icon-img" />
+        <img src="../assets/huggingface_logo-noborder.svg" alt="提示图标" class="icon-img" />
       </div>
         <div class="warning-text">如要使用此功能请先阅读关于中的内容</div>
       </div>

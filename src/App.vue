@@ -505,10 +505,10 @@ const setupStateExceptionMonitoring = () => {
         const responseClone = response.clone()
         const responseData = await responseClone.json()
 
-        // 检测状态异常（code: 500）
-        if (responseData.code === 500) {
-          console.log('检测到学习状态异常，自动刷新页面...')
-          addToHistory('检测到学习状态异常，自动刷新页面')
+        // 检测状态异常（code不为200）
+        if (responseData.code !== 200) {
+          console.log(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面...`)
+          addToHistory(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面`)
 
           // 延迟2秒后刷新页面
           setTimeout(() => {
@@ -547,10 +547,10 @@ const setupStateExceptionMonitoring = () => {
             try {
               const responseData = JSON.parse(this.responseText)
 
-              // 检测状态异常（code: 500）
-              if (responseData.code === 500) {
-                console.log('检测到学习状态异常(XHR)，自动刷新页面...')
-                addToHistory('检测到学习状态异常，自动刷新页面')
+              // 检测状态异常（code不为200）
+              if (responseData.code !== 200) {
+                console.log(`检测到学习状态异常(XHR, code: ${responseData.code})，自动刷新页面...`)
+                addToHistory(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面`)
 
                 // 延迟2秒后刷新页面
                 setTimeout(() => {

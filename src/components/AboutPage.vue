@@ -59,7 +59,7 @@ onMounted(async () => {
       <h2 class="title gradient-text">💰 支持项目 ¥6.6</h2>
       <div class="image-box">
         <img
-          src="C:\Users\PoiYee\Desktop\bh\beeline-helper\src\assets\pay.jpg"
+          src="../assets/pay.jpg"
           class="pay-image"
         />
       </div>
