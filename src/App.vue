@@ -473,14 +473,10 @@ const startStateExceptionDetection = () => {
 
 // 停止状态异常检测
 const stopStateExceptionDetection = () => {
-  // 停止网络请求监控
-  if (window.stateExceptionOriginalFetch) {
-    window.fetch = window.stateExceptionOriginalFetch
-    window.stateExceptionOriginalFetch = null
-  }
-  if (window.stateExceptionOriginalXMLHttpRequest) {
-    window.XMLHttpRequest = window.stateExceptionOriginalXMLHttpRequest
-    window.stateExceptionOriginalXMLHttpRequest = null
+  // 停止DOM状态检测定时器
+  if (stateExceptionInterval.value) {
+    clearInterval(stateExceptionInterval.value)
+    stateExceptionInterval.value = null
   }
 
   currentStatus.value = '已停止'
@@ -489,90 +485,27 @@ const stopStateExceptionDetection = () => {
 
 // 设置状态异常监控
 const setupStateExceptionMonitoring = () => {
-  // 使用不同的变量名避免与题目页面检测冲突
-  if (window.stateExceptionOriginalFetch) return // 避免重复设置
+  // 每2秒检测一次DOM状态
+  stateExceptionInterval.value = setInterval(() => {
+    const messageElement = document.querySelector('.el-message-box__container > div > p')
 
-  // 保存原始的fetch函数
-  window.stateExceptionOriginalFetch = window.fetch
+    if (messageElement) {
+      const messageText = messageElement.textContent.trim()
 
-  window.fetch = async function(...args) {
-    const url = args[0]
-    const response = await window.stateExceptionOriginalFetch(...args)
+      // 检测状态异常消息
+      if (messageText === '当前视频不允许倍速播放' ||
+          messageText === '系统检测到你的学习状态异常，请刷新后继续学习' ||
+          messageText === '播放位置不合法') {
+        console.log(`检测到状态异常消息: "${messageText}"，自动刷新页面...`)
+        addToHistory(`检测到状态异常消息: "${messageText}"，自动刷新页面`)
 
-    // 检查是否是学习状态报告请求
-    if (typeof url === 'string' && url.includes('/api/learning-service/admin/studentLearning/videoLearnProcessReport')) {
-      try {
-        const responseClone = response.clone()
-        const responseData = await responseClone.json()
-
-        // 检测状态异常（code不为200）
-        if (responseData.code !== 200) {
-          console.log(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面...`)
-          addToHistory(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面`)
-
-          // 延迟2秒后刷新页面
-          setTimeout(() => {
-            window.location.reload()
-          }, 2000)
-        }
-      } catch (error) {
-        console.warn('解析状态异常检测响应失败:', error)
+        // 延迟2秒后刷新页面
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
       }
     }
-
-    return response
-  }
-
-  // 拦截XMLHttpRequest
-  if (!window.stateExceptionOriginalXMLHttpRequest) {
-    window.stateExceptionOriginalXMLHttpRequest = window.XMLHttpRequest
-
-    window.XMLHttpRequest = function() {
-      const xhr = new window.stateExceptionOriginalXMLHttpRequest()
-      const originalOpen = xhr.open
-      const originalSend = xhr.send
-
-      xhr.open = function(method, url, ...rest) {
-        this._url = url
-        return originalOpen.call(this, method, url, ...rest)
-      }
-
-      xhr.send = function(data) {
-        const originalOnReadyStateChange = this.onreadystatechange
-
-        this.onreadystatechange = function() {
-          // 检查是否是学习状态报告请求
-          if (this._url && this._url.includes('/api/learning-service/admin/studentLearning/videoLearnProcessReport') &&
-              this.readyState === 4 && this.status === 200) {
-            try {
-              const responseData = JSON.parse(this.responseText)
-
-              // 检测状态异常（code不为200）
-              if (responseData.code !== 200) {
-                console.log(`检测到学习状态异常(XHR, code: ${responseData.code})，自动刷新页面...`)
-                addToHistory(`检测到学习状态异常(code: ${responseData.code})，自动刷新页面`)
-
-                // 延迟2秒后刷新页面
-                setTimeout(() => {
-                  window.location.reload()
-                }, 2000)
-              }
-            } catch (error) {
-              console.warn('解析状态异常检测响应失败(XHR):', error)
-            }
-          }
-
-          if (originalOnReadyStateChange) {
-            originalOnReadyStateChange.apply(this, arguments)
-          }
-        }
-
-        return originalSend.call(this, data)
-      }
-
-      return xhr
-    }
-  }
+  }, 2000)
 }
 
 // 启动视频暂停自动播放检测
