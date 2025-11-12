@@ -10,7 +10,7 @@ This is a browser extension built with Vite + Vue 3 + vite-plugin-monkey that ad
 
 - `npm install` - Install project dependencies
 - `npm run dev` - Start development server with hot reload
-- `npm run build` - Build production version to `dist/beeline-helper.user.js`
+- `npm run build` - Build production version to `dist/芯位助手-Beeline Helper.user.js`
 - `npm run preview` - Preview the built extension
 
 **Note**: The extension only activates on `*://*.beeline-ai.com/*` URLs. Test on actual beeline-ai.com pages to verify functionality.
@@ -29,19 +29,22 @@ This is a browser extension built with Vite + Vue 3 + vite-plugin-monkey that ad
 - **External Vue**: Uses external Vue dependency to reduce bundle size
 - **No Minification**: Builds without minification for easier debugging
 - **Target**: `esnext` for modern browser compatibility
-- **Version**: 0.6.0 (configured in vite.config.js)
+- **Version**: 0.7.6 (configured in vite.config.js, reads from package.json)
+- **Icon**: Base64 encoded icon image for userscript header
 - **Grants**: GM_getValue, GM_setValue, GM_deleteValue for persistent storage
 
 ### Key Features
 
 - **Floating Window Interface**: Draggable window with multi-page navigation system
 - **Auto Course Completion**: Automatically detects and clicks course completion buttons
-- **Auto Answer System**: Intelligent question detection and automated answering
+- **Auto Answer System**: Intelligent question detection and automated answering using external question bank APIs
 - **Status Monitoring**: Real-time operation logs and status display
-- **Feature Persistence**: Saves user preferences to localStorage
+- **Feature Persistence**: Saves user preferences using GM_* APIs
 - **Network Request Interception**: Monitors API calls to detect question pages and automatically open answer interface
 - **Video Management**: Auto-mute and auto-play functionality for video elements
 - **Multi-page Navigation**: Main page with subpages for different features
+- **State Exception Detection**: Automatically refreshes page when learning state reports return error codes
+- **Rainbow Effects**: Dynamic background styling with glass effects and customizable settings
 
 ## File Structure
 
@@ -58,7 +61,7 @@ src/
 │   ├── AutoAnswerPage.vue     # Question answering interface
 │   ├── AdvancedSettingsPage.vue # Advanced configuration options
 │   ├── AboutPage.vue          # About information and credits
-│   └── AnswerSettingsPage.vue # Answer settings configuration
+│   └── AnswerSettingsPage.vue # Answer settings configuration with API token management
 └── utils/
     ├── autoAnswer.js          # Core auto-answer functionality
     ├── questionDetection.js   # Question type and content detection
@@ -96,6 +99,9 @@ The auto course completion feature:
 - Waits 3 seconds before clicking to allow user interaction
 - Provides feedback via console logs and status updates
 - Includes operation history tracking with timestamps
+- **State Exception Detection**: Automatically refreshes page when video learning state reports return code 500
+- **Video Auto-play**: Automatically resumes paused videos with error handling
+- **FxxKXinWei Function**: State exception detection with automatic page refresh for learning state anomalies
 
 ### Auto Answer System
 
@@ -107,7 +113,7 @@ The auto answer functionality includes:
 - **Sequential Answering**: Processes all questions on a page in order with progress tracking
 - **Network Monitoring**: Automatically detects when users navigate to question pages and opens the answer interface
 - **Question Statistics**: Provides counts of total questions and supported types
-- **API Token Management**: Supports token-based authentication for external APIs
+- **API Token Management**: Supports token-based authentication for external APIs (currently tk.enncy.cn and SiliconFlow)
 - **Agreement System**: Requires user agreement before using auto-answer features
 - **Skip Logic**: Automatically skips questions that already have selections
 - **Error Handling**: Comprehensive error handling with detailed logging
@@ -115,11 +121,12 @@ The auto answer functionality includes:
 ### Feature Persistence
 
 User preferences are saved using GM_* APIs:
-- Feature toggle states (auto-complete, auto-mute, state exception detection, auto-play, operation log)
+- Feature toggle states (auto-complete, auto-mute, state exception detection, auto-play, operation log, rainbow effects, FxxKXinWei)
 - API tokens for question bank integration
 - Operation history for debugging and monitoring
 - Window position and visibility states
 - User agreement state
+- Rainbow effect settings (background image, opacity, glass effect intensity)
 
 ### Network Monitoring
 
@@ -140,7 +147,7 @@ The extension intercepts network requests to:
 - **DOM Observation**: MutationObserver for detecting new video elements and content changes
 - **Video State Monitoring**: Detects when videos are paused and automatically resumes playback with error handling
 - **Network Request Interception**: Overrides fetch and XMLHttpRequest to monitor API calls with proper error handling
-- **Rainbow Effects**: DOM observation for dynamic content with glass effects and background styling
+- **Rainbow Effects**: DOM observation for dynamic content with glass effects, background styling, and element removal
 
 ### State Management
 
@@ -151,7 +158,7 @@ The extension intercepts network requests to:
 - **Video State**: Monitoring and control of video elements (mute, play, pause) with DOM observation
 - **Network State**: Tracking of intercepted API requests and responses with separate monitoring instances
 - **Agreement State**: User agreement tracking for auto-answer feature with GM_* API
-- **Rainbow Settings**: Background image, opacity, and glass effect intensity configuration
+- **Rainbow Settings**: Background image, opacity, and glass effect intensity configuration with preview functionality
 - **API Token**: External question bank API token for auto-answer functionality
 
 When modifying the extension:

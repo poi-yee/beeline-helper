@@ -16,16 +16,9 @@
         </label>
       </div>
       <div class="toggle-item">
-        <span class="toggle-label">状态异常自动刷新</span>
+        <span class="toggle-label FxxK-xin-wei">FxxK XinWei</span>
         <label class="toggle-switch">
-          <input type="checkbox" :checked="props.stateExceptionEnabled" @change="$emit('toggle-state-exception', !props.stateExceptionEnabled)">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="toggle-item">
-        <span class="toggle-label">视频暂停自动播放</span>
-        <label class="toggle-switch">
-          <input type="checkbox" :checked="props.autoPlayEnabled" @change="$emit('toggle-auto-play', !props.autoPlayEnabled)">
+          <input type="checkbox" :checked="props.FxxKXinWeiEnabled" @change="$emit('toggle-FxxK-xin-wei', !props.FxxKXinWeiEnabled)">
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -43,17 +36,13 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  stateExceptionEnabled: {
-    type: Boolean,
-    default: false
-  },
-  autoPlayEnabled: {
+  FxxKXinWeiEnabled: {
     type: Boolean,
     default: false
   }
 })
 
-defineEmits(['toggle-auto-complete', 'toggle-auto-mute', 'toggle-state-exception', 'toggle-auto-play'])
+defineEmits(['toggle-auto-complete', 'toggle-auto-mute', 'toggle-FxxK-xin-wei'])
 </script>
 
 <style scoped>
@@ -76,6 +65,18 @@ defineEmits(['toggle-auto-complete', 'toggle-auto-mute', 'toggle-state-exception
   font-size: 14px;
   color: #333;
   font-weight: 500;
+}
+
+.toggle-label.FxxK-xin-wei {
+  color: #ff0000;
+  font-weight: bold;
+}
+
+.feature-description {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  font-weight: normal;
 }
 
 .toggle-switch {

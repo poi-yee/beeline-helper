@@ -15,8 +15,11 @@ export function detectQuestionType() {
   const questionType = (() => {
     switch (typeText) {
       case '单选题': return 'single';
+      case '单一选择': return 'single';
       case '多选题': return 'multiple';
+      case '多项选择': return 'multiple';
       case '判断题': return 'judgement';
+      case '判断': return 'judgement';
       case '填空题': return 'completion';
       case '主观题': return 'subjective';
       default: return 'unknown';

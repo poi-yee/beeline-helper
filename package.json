@@ -1,6 +1,6 @@
 {
   "name": "芯位助手-Beeline Helper",
-  "version": "0.7.6",
+  "version": "0.8.3",
   "description": "芯位蜜线/教育 自动播放，自动刷作业",
   "type": "module",
   "scripts": {

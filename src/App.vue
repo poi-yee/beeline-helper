@@ -24,12 +24,10 @@
             <AutoCoursePage
               :auto-complete-enabled="autoCompleteEnabled"
               :auto-mute-enabled="autoMuteEnabled"
-              :state-exception-enabled="stateExceptionEnabled"
-              :auto-play-enabled="autoPlayEnabled"
+              :FxxK-xin-wei-enabled="FxxKXinWeiEnabled"
               @toggle-auto-complete="handleAutoCompleteToggle"
               @toggle-auto-mute="handleAutoMuteToggle"
-              @toggle-state-exception="handleStateExceptionToggle"
-              @toggle-auto-play="handleAutoPlayToggle"
+              @toggle-FxxK-xin-wei="handleFxxKXinWeiToggle"
             />
           </div>
         </Transition>
@@ -95,8 +93,7 @@ const isWindowVisible = ref(false)
 const currentPage = ref('main') // 当前页面：main, auto-course (操作日志)
 const autoCompleteEnabled = ref(false) // 自动点击完成按钮开关状态
 const autoMuteEnabled = ref(false) // 自动静音开关状态
-const stateExceptionEnabled = ref(false) // 状态异常检测开关状态
-const autoPlayEnabled = ref(false) // 视频暂停自动播放开关状态
+const FxxKXinWeiEnabled = ref(false) // FxxKXinWei功能开关状态
 const operationLogEnabled = ref(true) // 操作日志开关状态
 const rainbowEnabled = ref(false) // Rainbow效果开关状态
 const rainbowSettings = ref({
@@ -106,11 +103,12 @@ const rainbowSettings = ref({
 }) // Rainbow设置
 const autoCompleteInterval = ref(null) // 自动检测定时器
 const stateExceptionInterval = ref(null) // 状态异常检测定时器
-const autoPlayInterval = ref(null) // 自动播放检测定时器
 const operationHistory = ref([]) // 操作历史记录
 const currentStatus = ref('未启动') // 当前工作状态
 const isCoursePage = ref(false) // 是否在课程页面
 const showAboutPage = ref(false) // 是否显示关于页面
+const noVideoPlaybackTimer = ref(null) // 无视频播放计时器
+const lastVideoPlaybackTime = ref(null) // 最后视频播放时间戳
 
 // 计算页面标题
 const pageTitle = computed(() => {
@@ -149,8 +147,7 @@ const saveFeatureStates = async () => {
   const states = {
     autoCompleteEnabled: autoCompleteEnabled.value,
     autoMuteEnabled: autoMuteEnabled.value,
-    stateExceptionEnabled: stateExceptionEnabled.value,
-    autoPlayEnabled: autoPlayEnabled.value,
+    FxxKXinWeiEnabled: FxxKXinWeiEnabled.value,
     operationLogEnabled: operationLogEnabled.value, // This is the state that controls visibility
     rainbowEnabled: rainbowEnabled.value,
     rainbowSettings: rainbowSettings.value
@@ -167,8 +164,7 @@ const loadFeatureStates = async () => {
     try {
       autoCompleteEnabled.value = states.autoCompleteEnabled || false
       autoMuteEnabled.value = states.autoMuteEnabled || false
-      stateExceptionEnabled.value = states.stateExceptionEnabled || false
-      autoPlayEnabled.value = states.autoPlayEnabled || false
+      FxxKXinWeiEnabled.value = states.FxxKXinWeiEnabled || false
       operationLogEnabled.value = states.operationLogEnabled !== undefined ? states.operationLogEnabled : true // Explicitly set based on loaded state
       rainbowEnabled.value = states.rainbowEnabled || false
 
@@ -191,11 +187,8 @@ const loadFeatureStates = async () => {
       if (autoMuteEnabled.value) {
         startAutoMute()
       }
-      if (stateExceptionEnabled.value) {
-        startStateExceptionDetection()
-      }
-      if (autoPlayEnabled.value) {
-        startAutoPlay()
+      if (FxxKXinWeiEnabled.value) {
+        startFxxKXinWei()
       }
       if (rainbowEnabled.value) {
         // 延迟应用Rainbow样式，确保DOM已加载
@@ -232,25 +225,14 @@ const handleAutoMuteToggle = (enabled) => {
   saveFeatureStates()
 }
 
-// 状态异常检测开关处理
-const handleStateExceptionToggle = (enabled) => {
-  stateExceptionEnabled.value = enabled
-  console.log('状态异常检测开关状态:', enabled ? '开启' : '关闭')
+// FxxKXinWei功能开关处理
+const handleFxxKXinWeiToggle = (enabled) => {
+  FxxKXinWeiEnabled.value = enabled
+  console.log('FxxKXinWei功能开关状态:', enabled ? '开启' : '关闭')
   if (enabled) {
-    startStateExceptionDetection()
+    startFxxKXinWei()
   } else {
-    stopStateExceptionDetection()
-  }
-  saveFeatureStates()
-}
-
-// 视频暂停自动播放开关处理
-const handleAutoPlayToggle = (enabled) => {
-  autoPlayEnabled.value = enabled
-  if (enabled) {
-    startAutoPlay()
-  } else {
-    stopAutoPlay()
+    stopFxxKXinWei()
   }
   saveFeatureStates()
 }
@@ -271,9 +253,24 @@ const checkIsHomeworkPage = () => {
   return isQuestionPage
 }
 
+// 检查是否在课程页面
+const checkIsCoursePage = () => {
+  const currentUrl = window.location.href.toLowerCase()
+
+  // 检查是否是课程页面（包含/courseInfo/learn/courseWare/和/video/）
+  const isCoursePage = currentUrl.includes('/courseinfo/learn/courseware/') && currentUrl.includes('/video/')
+
+  // 检查页面是否包含视频播放器相关元素
+  const hasVideoElements = document.querySelectorAll('video').length > 0
+  const hasVideoPlayer = document.querySelector('.video-player, [class*="video"], [class*="player"]')
+
+  return isCoursePage && (hasVideoElements || hasVideoPlayer)
+}
+
 // 拦截网络请求检测题目页面
 const setupNetworkMonitoring = () => {
-  if (window.originalFetch) return // 避免重复设置
+  if (window.beelineHelperNetworkMonitoringEnabled) return // 避免重复设置
+  window.beelineHelperNetworkMonitoringEnabled = true
 
   // 保存原始的fetch函数
   window.originalFetch = window.fetch
@@ -345,6 +342,26 @@ const setupNetworkMonitoring = () => {
       return xhr
     }
   }
+}
+
+// 停止网络监控
+const stopNetworkMonitoring = () => {
+  if (!window.beelineHelperNetworkMonitoringEnabled) return
+  window.beelineHelperNetworkMonitoringEnabled = false
+
+  // 恢复原始fetch函数
+  if (window.originalFetch) {
+    window.fetch = window.originalFetch
+    delete window.originalFetch
+  }
+
+  // 恢复原始XMLHttpRequest
+  if (window.originalXMLHttpRequest) {
+    window.XMLHttpRequest = window.originalXMLHttpRequest
+    delete window.originalXMLHttpRequest
+  }
+
+  console.log('网络监控已停止')
 }
 
 // 启动自动检测
@@ -462,30 +479,42 @@ const stopAutoMute = () => {
 }
 
 
-// 启动状态异常检测
-const startStateExceptionDetection = () => {
-  addToHistory('开始状态异常检测')
+// 启动FxxKXinWei功能
+const startFxxKXinWei = () => {
+  addToHistory('开始FxxKXinWei功能')
   currentStatus.value = '监控学习状态...'
 
   // 设置网络请求监控
   setupStateExceptionMonitoring()
+
+  // 启动防挂机守护机制
+  startAntiIdleProtection()
 }
 
-// 停止状态异常检测
-const stopStateExceptionDetection = () => {
+// 停止FxxKXinWei功能
+const stopFxxKXinWei = () => {
   // 停止DOM状态检测定时器
   if (stateExceptionInterval.value) {
     clearInterval(stateExceptionInterval.value)
     stateExceptionInterval.value = null
   }
 
+  // 停止防挂机守护机制
+  stopAntiIdleProtection()
+
+  // 停止课程页面无视频播放检测
+  stopCoursePageDetection()
+
+  // 停止状态异常网络监控
+  stopStateExceptionMonitoring()
+
   currentStatus.value = '已停止'
-  addToHistory('停止状态异常检测')
+  addToHistory('停止FxxKXinWei功能')
 }
 
-// 设置状态异常监控
+// 设置状态异常监控（FxxKXinWei功能）
 const setupStateExceptionMonitoring = () => {
-  // 每2秒检测一次DOM状态
+  // 每2秒检测一次DOM状态、课程页面视频状态和视频播放错误
   stateExceptionInterval.value = setInterval(() => {
     const messageElement = document.querySelector('.el-message-box__container > div > p')
 
@@ -505,53 +534,244 @@ const setupStateExceptionMonitoring = () => {
         }, 2000)
       }
     }
+
+    // 延迟检测视频播放错误，避免过早介入
+    setTimeout(() => {
+      const videoError = checkVideoError()
+      if (videoError) {
+        console.log(`检测到视频播放错误: "${videoError}"，自动刷新页面...`)
+        addToHistory(`检测到视频播放错误: "${videoError}"，自动刷新页面`)
+
+        // 延迟2秒后刷新页面
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      }
+    }, 5000) // 延迟5秒检测视频错误
+
+    // 同时检测课程页面无视频播放状态
+    checkCoursePageVideoStatus()
   }, 2000)
 }
 
-// 启动视频暂停自动播放检测
-const startAutoPlay = () => {
-  addToHistory('开始视频暂停自动播放检测')
-  currentStatus.value = '检测视频暂停状态...'
-
-  // 每2秒检测一次视频暂停状态
-  autoPlayInterval.value = setInterval(checkVideoPaused, 2000)
-
-  // 立即执行一次检测
-  checkVideoPaused()
+// 停止状态异常监控
+const stopStateExceptionMonitoring = () => {
+  // 状态异常监控与DOM状态检测使用同一个定时器，已在stopFxxKXinWei中处理
+  console.log('状态异常监控已停止')
 }
 
-// 停止视频暂停自动播放检测
-const stopAutoPlay = () => {
-  if (autoPlayInterval.value) {
-    clearInterval(autoPlayInterval.value)
-    autoPlayInterval.value = null
-  }
-  currentStatus.value = '已停止'
-  addToHistory('停止视频暂停自动播放检测')
-}
 
-// 检测视频暂停状态并自动播放
-const checkVideoPaused = () => {
+// 检测是否有视频正在播放
+const checkVideoPlaying = () => {
   const videoElements = document.querySelectorAll('video')
+  let isAnyVideoPlaying = false
 
   if (videoElements.length > 0) {
-    videoElements.forEach((video, index) => {
-      // 检查视频是否已加载元数据且处于暂停状态
-      if (video.readyState >= 1 && video.paused && !video.ended) {
-        console.log(`检测到视频 ${index + 1} 暂停，自动开始播放...`)
-        currentStatus.value = '检测到视频暂停，自动播放...'
-        addToHistory(`检测到视频 ${index + 1} 暂停，自动播放`)
-
-        // 延迟1秒后播放，避免频繁触发
-        setTimeout(() => {
-          video.play().catch(error => {
-            console.warn(`视频 ${index + 1} 自动播放失败:`, error)
-            addToHistory(`视频 ${index + 1} 自动播放失败`)
-          })
-        }, 1000)
+    videoElements.forEach((video) => {
+      // 检查视频是否正在播放
+      if (video.readyState >= 1 && !video.paused && !video.ended) {
+        isAnyVideoPlaying = true
+        lastVideoPlaybackTime.value = Date.now()
       }
     })
   }
+
+  return isAnyVideoPlaying
+}
+
+// 启动课程页面无视频播放检测（作为状态异常检测的一部分）
+const startCoursePageDetection = () => {
+  console.log('课程页面无视频播放检测已集成到状态异常检测中')
+  // 此功能现在作为状态异常检测的一部分运行，无需单独启动
+}
+
+// 停止课程页面无视频播放检测
+const stopCoursePageDetection = () => {
+  // 清除无视频播放计时器
+  if (noVideoPlaybackTimer.value) {
+    clearTimeout(noVideoPlaybackTimer.value)
+    noVideoPlaybackTimer.value = null
+  }
+
+  // 重置状态
+  lastVideoPlaybackTime.value = null
+  isCoursePage.value = false
+
+  console.log('课程页面无视频播放检测已停止')
+}
+
+// 检查课程页面视频状态
+const checkCoursePageVideoStatus = () => {
+  const wasOnCoursePage = isCoursePage.value
+  isCoursePage.value = checkIsCoursePage()
+
+  if (isCoursePage.value) {
+    console.log('检测到课程页面，开始监控视频播放状态')
+
+    const isVideoPlaying = checkVideoPlaying()
+
+    if (isVideoPlaying) {
+      // 有视频在播放，重置计时器
+      if (noVideoPlaybackTimer.value) {
+        clearTimeout(noVideoPlaybackTimer.value)
+        noVideoPlaybackTimer.value = null
+        console.log('检测到视频播放，重置无视频播放计时器')
+      }
+    } else {
+      // 没有视频在播放，启动或继续计时
+      if (!noVideoPlaybackTimer.value) {
+        console.log('检测到无视频播放，启动1分钟计时器')
+        noVideoPlaybackTimer.value = setTimeout(() => {
+          console.log('课程页面超过1分钟无视频播放，自动刷新页面...')
+          addToHistory('课程页面超过1分钟无视频播放，自动刷新页面')
+
+          // 延迟2秒后刷新页面
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        }, 60000) // 1分钟
+      }
+    }
+  } else {
+    // 不在课程页面，清除计时器
+    if (noVideoPlaybackTimer.value) {
+      clearTimeout(noVideoPlaybackTimer.value)
+      noVideoPlaybackTimer.value = null
+      console.log('离开课程页面，清除无视频播放计时器')
+    }
+
+    // 如果刚从课程页面离开，记录状态变化
+    if (wasOnCoursePage) {
+      console.log('离开课程页面')
+    }
+  }
+}
+
+// 检测视频播放错误
+const checkVideoError = () => {
+  // 检测错误对话框元素是否存在且有实际内容
+  const errorDialog = document.querySelector("#videoDomId > div.vjs-error-display.vjs-modal-dialog > div")
+
+  console.log('🔍 视频错误检测 - 选择器结果:', errorDialog)
+
+  if (errorDialog) {
+    // 错误对话框本身已经是内容元素，不需要再查询子元素
+    const contentText = errorDialog.textContent.trim()
+
+    console.log('🔍 检测到视频错误对话框，内容:', contentText || '(空)')
+    console.log('🔍 错误对话框完整HTML:', errorDialog.outerHTML)
+    console.log('🔍 错误对话框本身:', errorDialog)
+
+    // 检查所有可能的文本内容
+    console.log('🔍 innerText:', errorDialog.innerText)
+    console.log('🔍 textContent:', errorDialog.textContent)
+    console.log('🔍 innerHTML:', errorDialog.innerHTML)
+    console.log('🔍 children:', errorDialog.children)
+
+    if (contentText !== '') {
+      console.warn('❌ 检测到视频播放错误对话框，内容:', contentText)
+      return '视频播放错误'
+    } else {
+      console.log('✅ 错误对话框内容为空，跳过')
+    }
+  } else {
+    console.log('✅ 未检测到视频错误对话框')
+
+    // 调试：检查是否存在其他可能的错误元素
+    const allErrorDialogs = document.querySelectorAll('div.vjs-error-display')
+    console.log('🔍 所有可能的错误对话框:', allErrorDialogs.length)
+    allErrorDialogs.forEach((dialog, index) => {
+      console.log(`🔍 错误对话框 ${index + 1}:`, dialog)
+      console.log(`🔍 错误对话框 ${index + 1} 父级:`, dialog.parentElement)
+    })
+  }
+  return null
+}
+
+// 防挂机守护机制
+const startAntiIdleProtection = () => {
+  addToHistory('启动防挂机守护机制')
+  console.log('⚡ 芯位蜜线防挂机守护已加载完毕')
+
+  /*****************************************************
+   * 🎬 自动播放守护机制
+   *****************************************************/
+  const tryPlayAll = () => {
+    const videos = document.querySelectorAll('video');
+    if (videos.length === 0) return;
+    videos.forEach(v => {
+      if (v.paused || v.readyState < 2) {
+        v.muted = true;
+        const playPromise = v.play();
+        if (playPromise) {
+          playPromise.catch(err => console.warn('⚠️ 自动播放失败:', err));
+        }
+      }
+    });
+  };
+
+  // 定时器防守循环（防止脚本强制暂停）
+  const antiIdleInterval = setInterval(tryPlayAll, 3000);
+
+  /*****************************************************
+   * 👁️ DOM 监控机制
+   * 检测页面中 video 元素变化，自动重新挂载播放守护
+   *****************************************************/
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      if (m.addedNodes.length) {
+        for (const node of m.addedNodes) {
+          if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+            console.log('🎥 检测到新视频节点，自动播放守护启动');
+            tryPlayAll();
+          }
+        }
+      }
+    }
+  });
+
+  const domObserver = new MutationObserver(() => {
+    if (document.readyState === 'complete') {
+      observer.observe(document.body, { childList: true, subtree: true });
+      tryPlayAll();
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
+  // 立即启动一次
+  tryPlayAll();
+  // 多重重试确保成功
+  setTimeout(tryPlayAll, 1000);
+  setTimeout(tryPlayAll, 3000);
+
+  // 保存定时器和观察器以便后续停止
+  window.beelineHelperAntiIdleInterval = antiIdleInterval;
+  window.beelineHelperAntiIdleObserver = observer;
+  window.beelineHelperAntiIdleDomObserver = domObserver;
+
+  console.log('✅ 防挂机守护机制完全启动');
+}
+
+// 停止防挂机守护机制
+const stopAntiIdleProtection = () => {
+  // 清除定时器
+  if (window.beelineHelperAntiIdleInterval) {
+    clearInterval(window.beelineHelperAntiIdleInterval);
+    window.beelineHelperAntiIdleInterval = null;
+  }
+
+  // 停止观察器
+  if (window.beelineHelperAntiIdleObserver) {
+    window.beelineHelperAntiIdleObserver.disconnect();
+    window.beelineHelperAntiIdleObserver = null;
+  }
+
+  if (window.beelineHelperAntiIdleDomObserver) {
+    window.beelineHelperAntiIdleDomObserver.disconnect();
+    window.beelineHelperAntiIdleDomObserver = null;
+  }
+
+  console.log('🔍 防挂机守护机制已完全停止');
+  addToHistory('停止防挂机守护机制');
 }
 
 // 添加操作历史
@@ -585,6 +805,11 @@ const getStatusClass = (status) => {
 // 监听页面变化
 const handlePageChange = () => {
   checkIsHomeworkPage()
+
+  // 如果启用了FxxKXinWei功能，检查课程页面视频状态
+  if (FxxKXinWeiEnabled.value) {
+    checkCoursePageVideoStatus()
+  }
 }
 
 // 应用Rainbow样式
@@ -1054,6 +1279,12 @@ onUnmounted(() => {
   // 移除页面变化监听器
   window.removeEventListener('popstate', handlePageChange)
   window.removeEventListener('hashchange', handlePageChange)
+
+  // 停止所有正在运行的功能
+  stopAutoCompleteDetection()
+  stopAutoMute()
+  stopFxxKXinWei()
+  stopNetworkMonitoring()
 })
 </script>
 
